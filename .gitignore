@@ -1,0 +1,9 @@
+# Python cruft
+*.pyc
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+
+#Images of individual distributions
+figures/distributions/*.eps
