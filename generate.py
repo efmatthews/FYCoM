@@ -94,9 +94,10 @@ for p in range(0,len(systems)):
 	file = open( 'yields/' + system + '_nu.csv', 'r' )
 	lines = file.readlines()
 	file.close()
-	nu_bar = float( lines[0].strip() )
+	#nu_bar = float( lines[0].strip() )
 	P_nu_A = {}
-	for line in lines[1:]:
+	#for line in lines[1:]:
+	for line in lines:
 		parts = line.split(',')
 		A = int( parts[0] )
 		P_nu = []
@@ -116,7 +117,8 @@ for p in range(0,len(systems)):
 	#Calculate middle A of system
 	#-----------------------------------------------------------------------------------------
 	Ap = ZAs[p][1]
-	A_mid = int( (Ap - nu_bar) / 2.0 )
+	#A_mid = int( (Ap - nu_bar) / 2.0 )
+	A_mid = int( (A_max - A_min)/2.0 ) + A_min
 	#-----------------------------------------------------------------------------------------
 
 
@@ -215,7 +217,7 @@ for p in range(0,len(systems)):
 					del nus[nu]
 					del P_nu[nu]
 
-			if( len(nus) == 0 ):
+			if( (len(nus) == 0) or (sum(P_nu) == 0) ):
 				continue
 
 			norm = 1.0 / sum(P_nu)
@@ -374,7 +376,7 @@ for p in range(0,len(systems)):
 
 	#Plot resampled distribution for all fission yields
 	#-----------------------------------------------------------------------------------------
-	if( (system == 'U235F') and False ):
+	if( (system == 'U235F') and True ):
 		for i in range(0,len(key_list)):
 			key = key_list[i]
 			resampled = trials_res[i,:]
