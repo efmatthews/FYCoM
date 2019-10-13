@@ -228,9 +228,22 @@ for p in range(0,len(systems)):
 
 
 
+	#Output P_nu distribution to file
+	#-----------------------------------------------------------------------------------------
+	file = open( 'yields/' + system + '_nu.csv', 'w' )
+	for ACUR in range(AMIN,AMAX+1):
+		file.write( str(ACUR) + ',' + str( gauss_trunc_int(0,fits[ACUR-AMIN][0],fits[ACUR-AMIN][1]) ) )
+		for j in range(1,10):
+			file.write( ', ' + str( gauss_trunc_int(j,fits[ACUR-AMIN][0],fits[ACUR-AMIN][1]) ) )
+		file.write('\n')
+	file.close()
+	#-----------------------------------------------------------------------------------------
+
+
+
 	#Plot yield residuals for one fissioning system
 	#-----------------------------------------------------------------------------------------
-	if( system == 'U235F' ):
+	if( (system == 'U235F') and False ):
 		for ACUR in range(AMIN,AMAX+1):
 			chi2, yields_new = chi2A( fits[ACUR-AMIN], return_yields=True )
 
@@ -271,6 +284,5 @@ for p in range(0,len(systems)):
 			plt.tight_layout()
 			plt.savefig( 'yields/nu_reports/residuals/' + system + '_' + str(ACUR) + '_nu_bar.png', dpi=500 )
 			plt.clf()
-
 	#-----------------------------------------------------------------------------------------	
 #---------------------------------------------------------------------------------------------
