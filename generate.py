@@ -258,8 +258,16 @@ for p in range(0,len(systems)):
 
 	#Calculate the covariance and correlation matrix
 	#-----------------------------------------------------------------------------------------
-	yields_cov = numpy.cov( trials_res )
+	#yields_cov = numpy.cov( trials_res )
 	yields_corr = numpy.corrcoef( trials_res )
+	df_std = []
+	df_stdT = []
+	for key in key_list:
+		df_std.append( yields_unc[key] )
+		df_stdT.append( [yields_unc[key]] )
+	df_std = numpy.array( df_std )
+	df_stdT = numpy.array( df_stdT )
+	yields_cov = df_std * yields_corr * df_stdT
 	#-----------------------------------------------------------------------------------------
 
 
@@ -376,7 +384,7 @@ for p in range(0,len(systems)):
 
 	#Plot resampled distribution for all fission yields
 	#-----------------------------------------------------------------------------------------
-	if( (system == 'U235F') and True ):
+	if( (system == 'U235F') and False ):
 		for i in range(0,len(key_list)):
 			key = key_list[i]
 			resampled = trials_res[i,:]
