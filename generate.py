@@ -65,6 +65,8 @@ for p in range(0,len(systems)):
 		yields[Z,A,I] = Y
 		yields_unc[Z,A,I] = Y_unc
 	key_list = list( yields.keys() )
+	key_list_Z = numpy.asarray( [sublist for sublist in key_list] ).T[0,:]
+	key_list_A = numpy.asarray( [sublist for sublist in key_list] ).T[1,:]
 	key_list.sort()
 	#-----------------------------------------------------------------------------------------
 
@@ -94,9 +96,7 @@ for p in range(0,len(systems)):
 	file = open( 'yields/' + system + '_nu.csv', 'r' )
 	lines = file.readlines()
 	file.close()
-	#nu_bar = float( lines[0].strip() )
 	P_nu_A = {}
-	#for line in lines[1:]:
 	for line in lines:
 		parts = line.split(',')
 		A = int( parts[0] )
@@ -110,6 +110,11 @@ for p in range(0,len(systems)):
 			P_nu[i] = norm * P_nu[i]
 		#-------------------------------------------------------------------------------------
 		P_nu_A[A] = P_nu
+
+	nu_bar = 0.0
+	for key in key_list:
+		for i in range(0,10):
+			nu_bar += P_nu_A[key[1]][i] * i * yields[key]/200.0
 	#-----------------------------------------------------------------------------------------
 
 
@@ -187,7 +192,6 @@ for p in range(0,len(systems)):
 		#-------------------------------------------------------------------------------------
 
 
-
 		#Normalize yields that were resampled from one side to sum to 1.0
 		#-------------------------------------------------------------------------------------
 		norm = 0.0
@@ -197,8 +201,9 @@ for p in range(0,len(systems)):
 
 		for key in yields_vard.keys():
 			yields_vard[key] = norm * yields_vard[key]
-		#-------------------------------------------------------------------------------------
 
+		#print(sum(yields_vard.values()))
+		#-------------------------------------------------------------------------------------
 
 
 		#Use he P(nu,A) distribution to calculate yields on the other side of the distribution
@@ -206,7 +211,7 @@ for p in range(0,len(systems)):
 		Zp = ZAs[p][0]
 		for key in list( yields_vard.keys() ):
 			Z_comp =  Zp - key[0]
-			P_nu = P_nu_A[key[1]]
+			P_nu = P_nu_A[key[1]][:]
 			nus = list( range(0,len(P_nu)) )
 			#Check if each nu P_nu leads to an existing isotope in the evaluation
 			#If not remove that nu from P_nu and renormalize P_nu
@@ -227,7 +232,7 @@ for p in range(0,len(systems)):
 
 
 
-			#Claculate partial yields
+			#Calculate partial yields
 			#---------------------------------------------------------------------------------
 			for j in range(0,len(nus)):
 				nu = nus[j]
@@ -242,7 +247,6 @@ for p in range(0,len(systems)):
 		#-------------------------------------------------------------------------------------
 
 
-
 		#Place resampled yields into a numpy array for rapid covariance matrix calculation
 		#-------------------------------------------------------------------------------------
 		for i in range(0,len(key_list)):
@@ -253,6 +257,43 @@ for p in range(0,len(systems)):
 				trials_res[i,n] = yields[key]
 		#-------------------------------------------------------------------------------------
 	#-----------------------------------------------------------------------------------------
+
+
+	#Verify conserved quantities 
+	#-------------------------------------------------------------------------------------
+	YZs_ratio_cuts = []
+	file = open( 'matrices/verification_records/verification_' + system + '.csv', 'w' )
+	file.write( 'Y_tot/200, Z_tot/Z_CN, A_tot/(A_CN-nu_bar), min( abs(Y(Z)/Y(Z_CN-Z) - 1) ), avg( abs(Y(Z)/Y(Z_CN-Z) ) ) \n' )
+	for n in range(0,TRIALS):
+		Y_tot = sum( trials_res[:,n] ) / 200.0
+		Z_tot = sum( trials_res[:,n] * key_list_Z ) / (Zp*100.0)
+		A_tot = sum( trials_res[:,n] * key_list_A ) / ((Ap-nu_bar)*100.0)
+		YZs = numpy.zeros( 300 )
+		for i in range(0,len(key_list)):
+			YZs[ key_list[i][0] ] += trials_res[i,n]
+
+		YZs_ratio = []
+		for i in range(min(key_list_Z),max(key_list_Z)+1):
+			YZs_ratio.append( YZs[i]/YZs[Zp-i] )
+			YZs_ratio_cuts.append( YZs[i]/YZs[Zp-i] )
+		YZs_ratio = numpy.array( YZs_ratio ) 
+		YZs_ratio_cut = YZs_ratio[abs(YZs_ratio - numpy.mean(YZs_ratio)) < 5 * numpy.std(YZs_ratio)]
+		avg = numpy.mean( YZs_ratio_cut )
+		file.write( str(Y_tot) + ', ' + str(Z_tot) + ', ' + str(A_tot) + ', ' + str(min(abs(YZs_ratio-1.0))) + ', ' + str(avg) + '\n' )
+	file.close()
+	YZs_ratio_cuts = numpy.array( YZs_ratio_cuts )
+	n_start = len(YZs_ratio_cuts)
+	#YZs_ratio_cuts = YZs_ratio_cuts[abs(YZs_ratio_cuts - numpy.mean(YZs_ratio_cuts)) < 3 * numpy.std(YZs_ratio_cuts)]
+	YZs_ratio_cuts = YZs_ratio_cuts[ abs(YZs_ratio_cuts - 1.0) < 1.0 ]
+	rcParams['figure.figsize'] = 8, 8
+	plt.hist( YZs_ratio_cuts, bins=100 )
+	plt.xlabel( 'abs(Y(Z)/Y(Z_CN-Z)' )
+	plt.ylabel( 'No. Occurrances' )
+	plt.title( str(len(YZs_ratio_cuts)) + '/' + str(n_start)  + ', ' + str( round(numpy.mean(YZs_ratio_cuts),4) ) )
+	plt.tight_layout()
+	plt.savefig( 'matrices/verification_records/verification_' + system + '.png' )
+	plt.clf()
+	#-------------------------------------------------------------------------------------
 
 
 
