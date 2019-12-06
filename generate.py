@@ -122,8 +122,18 @@ for p in range(0,len(systems)):
 	#Calculate middle A of system
 	#-----------------------------------------------------------------------------------------
 	Ap = ZAs[p][1]
-	#A_mid = int( (Ap - nu_bar) / 2.0 )
-	A_mid = int( (A_max - A_min)/2.0 ) + A_min
+	A_mid = None
+	Y_tot = 0.0
+	for A in range(A_min,A_max):
+	    for Z in range(0,100):
+	        for I in range(0,3):
+	            try:
+	                Y_tot += yields[Z,A,I]
+	            except KeyError as e:
+	                pass
+	    if( Y_tot >= 100.0 ):
+	        A_mid = A
+	        break
 	#-----------------------------------------------------------------------------------------
 
 
