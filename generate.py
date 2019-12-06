@@ -201,8 +201,6 @@ for p in range(0,len(systems)):
 
 		for key in yields_vard.keys():
 			yields_vard[key] = norm * yields_vard[key]
-
-		#print(sum(yields_vard.values()))
 		#-------------------------------------------------------------------------------------
 
 
@@ -266,8 +264,8 @@ for p in range(0,len(systems)):
 	file.write( 'Y_tot/200, Z_tot/Z_CN, A_tot/(A_CN-nu_bar), min( abs(Y(Z)/Y(Z_CN-Z) - 1) ), avg( abs(Y(Z)/Y(Z_CN-Z) ) ) \n' )
 	for n in range(0,TRIALS):
 		Y_tot = sum( trials_res[:,n] ) / 200.0
-		Z_tot = sum( trials_res[:,n] * key_list_Z ) / (Zp*100.0)
-		A_tot = sum( trials_res[:,n] * key_list_A ) / ((Ap-nu_bar)*100.0)
+		Z_tot = sum( trials_res[:,n] * key_list_Z ) / (Zp*Y_tot*100.0)
+		A_tot = sum( trials_res[:,n] * key_list_A ) / ((Ap-nu_bar)*Y_tot*100.0)
 		YZs = numpy.zeros( 300 )
 		for i in range(0,len(key_list)):
 			YZs[ key_list[i][0] ] += trials_res[i,n]
