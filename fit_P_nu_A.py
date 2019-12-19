@@ -165,8 +165,12 @@ for p in range(0,len(systems)):
 		if( A > A_max ):
 			A_max = A
 		if( I == 0 ):
-			yields[Z,A] = Y
-			yields_unc[Z,A] = Y_unc
+			try:
+				yields[Z,A] += Y
+				yields_unc[Z,A] += Y_unc**2.0
+			except KeyError as e:
+				yields[Z,A] = Y
+				yields_unc[Z,A] = Y_unc**2.0
 	YIELDS = yields
 	YIELDS_UNC = yields_unc
 	ZCN = ZAs[p][0]
@@ -267,7 +271,7 @@ for p in range(0,len(systems)):
 
 			fig = plt.figure()
 			frame1 = fig.add_axes((.1,.3,.8,.6))
-			plt.errorbar( Zs, yields_old_vals, yerr=yields_old_vals_unc, fmt='bo', label='Evaluation' )
+			plt.errorbar( Zs, yields_old_vals, yerr=numpy.sqrt(yields_old_vals_unc), fmt='bo', label='Evaluation' )
 			plt.errorbar( Zs, yields_new_vals, fmt='r.', label=r'From $P(\nu,A)$' )
 			plt.ylabel( 'Yield (%)' )
 			plt.title( 'A = ' + str(ACUR) + ', ' + r'$\bar{\nu}$' + ' = ' + str(round(gauss_trunc_bar(*fits[ACUR-AMIN]),2)) + ', ' + r'$\chi^2$' + ' = ' + ('%.2E' % Decimal(str(chi2))) )
