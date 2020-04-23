@@ -5,6 +5,7 @@
 #Constants
 #---------------------------------------------------------------------------------------------
 TRIALS = 10000
+NUM_PREC = 0.0001
 #---------------------------------------------------------------------------------------------
 
 #Import Statements
@@ -15,6 +16,7 @@ import matplotlib.pyplot as plt
 from pylab import rcParams
 import warnings
 warnings.filterwarnings("ignore")
+import time
 #---------------------------------------------------------------------------------------------
 
 
@@ -38,7 +40,9 @@ for line in lines:
 #Iterate over systems, generate a covariance matrix for each
 #---------------------------------------------------------------------------------------------
 for p in range(0,len(systems)):
+	time_start = time.time()
 	system = systems[p]
+	print( system )
 	Zp = ZAs[p][0]
 	Ap = ZAs[p][1]
 
@@ -57,6 +61,9 @@ for p in range(0,len(systems)):
 	A_max = 0
 	yields = {}
 	yields_unc = {}
+	Y_tot_orig = 0.0
+	Z_tot_orig = 0.0
+	A_tot_orig = 0.0
 	for line in lines:
 	    parts = line.split(',')
 	    Z = int( parts[0] )
@@ -69,6 +76,9 @@ for p in range(0,len(systems)):
 	    if( A > A_max ):
 	        A_max = A
 	    yields[Z,A,I] = Y
+	    Y_tot_orig += Y
+	    Z_tot_orig += Y * Z
+	    A_tot_orig += Y * A
 	    yields_unc[Z,A,I] = Y_unc
 	key_list = list( yields.keys() )
 	key_list_Z = numpy.asarray( [sublist for sublist in key_list] ).T[0,:]
@@ -145,15 +155,19 @@ for p in range(0,len(systems)):
 
 	#Perform n = TRIALS of resamplings of fission yield library
 	#-----------------------------------------------------------------------------------------
+	numpy.random.seed(0)
+	random.seed(0)
 	trials_res = numpy.zeros( (len(key_list),TRIALS) )
-	for n in range(0,TRIALS):
+	extra_products = {}
+	n = 0
+	while(n < TRIALS):
 	    yields_vard = {}
 
-	    #Sample whether to resample from the heavy or light side
+	    #Choose whether to resample from the heavy or light side
 	    #-------------------------------------------------------------------------------------
-	    side = random.random()
+	    side = int( n % 2 )
 
-	    if( side < 0.5 ): #light side to be resampled
+	    if( side == 0 ): #light side to be resampled
 	        As = list( range( A_min, A_mid ) )
 	        As2 = list( range( A_mid, A_max+1 ) )
 	    else: #heavy side to be resampled
@@ -182,7 +196,7 @@ for p in range(0,len(systems)):
 	        #---------------------------------------------------------------------------------
 	        weights = []
 	        for key in keys:
-	            weights.append( 1.0 / yields_unc[key] )
+	            weights.append( 1.0 / (yields_unc[key]/yields[key])**2.0 )
 	        weights = numpy.array( weights ) / sum(weights)
 
 	        selected = numpy.random.choice( list(range(0,len(keys))), p=weights )
@@ -217,12 +231,13 @@ for p in range(0,len(systems)):
 	    #-------------------------------------------------------------------------------------
 
 
-	    #Use he P(nu,A) distribution to calculate yields on the other side of the distribution
+	    #Use the P(nu,A) distribution to calculate yields on the other side of the distribution
 	    #-------------------------------------------------------------------------------------
 	    for key in list( yields_vard.keys() ):
 	        Z_comp =  Zp - key[0]
 	        P_nu = P_nu_A[key[1]][:]
 	        nus = list( range(0,len(P_nu)) )
+	        
 	        #Check if each nu P_nu leads to an existing isotope in the evaluation
 	        #If not remove that nu from P_nu and renormalize P_nu
 	        #---------------------------------------------------------------------------------
@@ -249,11 +264,76 @@ for p in range(0,len(systems)):
 	            A_comp = Ap - nu - key[1]
 	            for i in range(0,2):
 	                Y = yields_vard[key] * P_nu[j] * isomer_ratios[Z_comp, A_comp][i]
-	                try:
-	                    yields_vard[Z_comp,A_comp,i] += Y
-	                except KeyError as e:
-	                    yields_vard[Z_comp,A_comp,i] = Y
+	                if( Y > 0.0 ):
+	                    try:
+	                        yields_vard[Z_comp,A_comp,i] += Y
+	                    except KeyError as e:
+	                        yields_vard[Z_comp,A_comp,i] = Y
 	        #---------------------------------------------------------------------------------
+	    #-------------------------------------------------------------------------------------
+	    
+
+	    #Renormalize so that all yields sum to 2.0
+	    #-------------------------------------------------------------------------------------
+	    Y_tot = 0.0
+	    for key in yields_vard.keys():
+	        Y_tot += yields_vard[key]
+	    
+	    norm = 200.0 / Y_tot
+	    for key in yields_vard.keys():
+	        yields_vard[key] = norm * yields_vard[key]
+	    #-------------------------------------------------------------------------------------
+	    
+	    
+	    #Some products are produced from the P(nu,A) distribution that aren't in the evaluation
+	    #Move the yield given to these products to the product with the nearest A
+	    #Note: these all are isomer yields with value 0.0 that appear to get assigned a value due to the 
+	    #application of `isomer_ratios' 
+	    #-------------------------------------------------------------------------------------
+	    toRemove = []
+	    toAdd = {}
+	    for key in yields_vard.keys():
+	        if( not(key in key_list) and not(key in extra_products.keys()) ):
+	            closest_key = None
+	            diff = 100000
+	            for key2 in key_list:
+	                if( key[0] == key2[0] ):
+	                    diff_cur = abs( key[1] - key2[1] )
+	                    if( diff_cur < diff ):
+	                        closest_key = key2
+	                        diff = diff_cur
+	            extra_products[key] = key2
+	            
+	        if( key in extra_products.keys() ):
+	            try:
+	                yields_vard[ extra_products[key] ] = yields_vard[ extra_products[key] ] + yields_vard[ key ]
+	            except KeyError as e:
+	                toAdd[ extra_products[key] ] = yields_vard[ key ]
+	            toRemove.append( key )
+	    
+	    for key in toRemove:
+	        del yields_vard[key]
+	    for key in toAdd:
+	        yields_vard[key] = toAdd[key]
+	    #-------------------------------------------------------------------------------------
+	    
+	    
+	    #Check that this trial meets the numerical precision criteria, if not break and repeat
+	    #-------------------------------------------------------------------------------------
+	    Y_tot = 0.0
+	    for key in yields_vard.keys():
+	        Y_tot += yields_vard[key]
+	    Y_tot = Y_tot / 200.0
+	    Z_tot = 0.0
+	    A_tot = 0.0
+	    for key in yields_vard.keys():
+	        Z_tot += yields_vard[key] * key[0]
+	        A_tot += yields_vard[key] * key[1]
+	    Z_tot = abs( ((Z_tot/100.0) / (Zp*Y_tot)) - 1.0 )
+	    A_tot = abs( ((A_tot/100.0) / ((Ap-nu_bar)*Y_tot)) - 1.0 )
+	    if( ( Z_tot > NUM_PREC ) or ( A_tot > NUM_PREC ) ):
+	        #print( Z_tot, A_tot )
+	        continue
 	    #-------------------------------------------------------------------------------------
 
 
@@ -265,31 +345,20 @@ for p in range(0,len(systems)):
 	            trials_res[i,n] = yields_vard[key]
 	        except KeyError as e:
 	            trials_res[i,n] = yields[key]
+	    n += 1 #Increase index
 	    #-------------------------------------------------------------------------------------
 	#-----------------------------------------------------------------------------------------
 
 
 	#Verify conserved quantities 
 	#-------------------------------------------------------------------------------------
-	YZs_ratio_cuts = []
 	file = open( 'matrices/verification_records/verification_' + system + '.csv', 'w' )
-	file.write( 'Y_tot/200, Z_tot/Z_CN, A_tot/(A_CN-nu_bar), min( abs(Y(Z)/Y(Z_CN-Z) - 1) ), avg( abs(Y(Z)/Y(Z_CN-Z) ) ) \n' )
+	file.write( 'Y_tot/Y_tot_orig, Z_tot/Z_CN, A_tot/(A_CN-nu_bar)\n' )
 	for n in range(0,TRIALS):
-	    Y_tot = sum( trials_res[:,n] ) / 200.0
+	    Y_tot = sum( trials_res[:,n] ) / Y_tot_orig
 	    Z_tot = sum( trials_res[:,n] * key_list_Z ) / (Zp*Y_tot*100.0)
 	    A_tot = sum( trials_res[:,n] * key_list_A ) / ((Ap-nu_bar)*Y_tot*100.0)
-	    YZs = numpy.zeros( 300 )
-	    for i in range(0,len(key_list)):
-	        YZs[ key_list[i][0] ] += trials_res[i,n]
-
-	    YZs_ratio = []
-	    for i in range(min(key_list_Z),max(key_list_Z)+1):
-	        YZs_ratio.append( YZs[i]/YZs[Zp-i] )
-	        YZs_ratio_cuts.append( YZs[i]/YZs[Zp-i] )
-	    YZs_ratio = numpy.array( YZs_ratio ) 
-	    YZs_ratio_cut = YZs_ratio[abs(YZs_ratio - numpy.mean(YZs_ratio)) < 5 * numpy.std(YZs_ratio)]
-	    avg = numpy.mean( YZs_ratio_cut )
-	    file.write( str(Y_tot) + ', ' + str(Z_tot) + ', ' + str(A_tot) + ', ' + str(min(abs(YZs_ratio-1.0))) + ', ' + str(avg) + '\n' )
+	    file.write( str(Y_tot) + ', ' + str(Z_tot) + ', ' + str(A_tot) + '\n' )
 	file.close()
 	#-------------------------------------------------------------------------------------
 
@@ -357,4 +426,9 @@ for p in range(0,len(systems)):
 	plt.savefig( 'figures/' + system + '_corr.png', dpi=500 )
 	plt.clf()
 	#-----------------------------------------------------------------------------------------
+
+
+
+	time_end = time.time()
+	print( '   - ' + str(round(time_end-time_start)) + ' s.' )
 #---------------------------------------------------------------------------------------------

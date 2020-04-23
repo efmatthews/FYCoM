@@ -8,7 +8,7 @@
 #Constants
 #---------------------------------------------------------------------------------------------
 TRIALS = 1000
-energies = { 'T':'thermal', 'F':'fission', 'H':'DT', 'D':'DD' }
+energies = { 'T':'thermal', 'F':'fission', 'H':'DT', 'D':'DD', 'SF':'SF' }
 elements = { 90:'Th', 91:'Pa', 92:'U', 93:'Np', 94:'Pu', 95:'Am', 96:'Cm', 98:'Cf', 99:'Es', 100:'Fm' }
 #---------------------------------------------------------------------------------------------
 
@@ -84,8 +84,14 @@ for p in range(0,len(systems)):
 	file.write( 'input_data/isotopes.csv     ISOTOPES FILE\n' )
 	file.write( 'input_data/decays.csv       DECAYS   FILE\n' )
 	file.write( 'input_data/gammas.csv       GAMMAS   FILE\n' )
-	file.write( 'YIELDS:FILE\n' )
-	file.write( 'yields/' + elements[Zp] + ',' + str(Ap) + ',' + energies[system[-1]] + '   YIELDS   FILE\n' )
+	file.write( 'YIELDS:ER\n' )
+	if( system[-2:] == 'SF' ):
+		energy = 'SF'
+		A_in = Ap
+	else:
+		energy = energies[system[-1]]
+		A_in = Ap-1
+	file.write( elements[Zp] + ',' + str(A_in) + ',' + energy + '   YIELDS   FILE\n' )
 	file.write( 'NONE  CHAINS OUTPUT\n' )
 	file.write( 'output/decay_stems.csv   STEMS OUTPUT\n' )
 	file.write( 'NONE  POPS OUTPUT\n' )
@@ -218,7 +224,7 @@ for p in range(0,len(systems)):
 	        yields_vard_dict[inds[i]] = yields_vard[i]
 	    
 	    yields_cml = {}
-	    for key in trans_probs:
+	    for key in trans_probs.keys():
 	        prob = numpy.random.normal( trans_probs[key][0], trans_probs[key][1] )
 	        try:
 	            yields_cml[key[3],key[4],key[5]] += prob * yields_vard_dict[key[3],key[4],key[5]]
@@ -227,9 +233,12 @@ for p in range(0,len(systems)):
 	                yields_cml[key[3],key[4],key[5]] = prob * yields_vard_dict[key[3],key[4],key[5]]
 	            except KeyError as e:
 	                pass
-	    
+
 	    for i in range(0,len(inds)):
-	        trials_res[i,n] = yields_cml[inds[i]]
+	        try:
+	            trials_res[i,n] = yields_cml[inds[i]]
+	        except KeyError as e:
+	            trials_res[i,n] = float( numpy.random.normal( yields[inds[i]], yields_unc[inds[i]] ) )
 	#-----------------------------------------------------------------------------------------
 
 
@@ -284,10 +293,8 @@ for p in range(0,len(systems)):
 	plt.tight_layout()
 	plt.xlabel('FY Index')
 	plt.ylabel('FY Index')
-	plt.savefig( 'figures/' + system + '_cml_corr.eps', format='eps', dpi=300 )
 	plt.savefig( 'figures/' + system + '_cml_corr.png', dpi=500 )
 	plt.clf()
-	Image( 'figures/' + system + '_cml_corr.png' )
 	#-----------------------------------------------------------------------------------------
 
 
