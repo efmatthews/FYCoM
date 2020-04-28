@@ -1,7 +1,17 @@
 #Eric Matthews
-#April 24, 2020
+#September 23, 2019
 #Fission Yield Covariance Matrix Generation (FYCoM)
 #Independent covariances to cumulative covariances
+
+
+
+#Constants
+#---------------------------------------------------------------------------------------------
+TRIALS = 10000
+energies = { 'T':'thermal', 'F':'fission', 'H':'DT', 'D':'DD', 'SF':'SF' }
+elements = { 90:'Th', 91:'Pa', 92:'U', 93:'Np', 94:'Pu', 95:'Am', 96:'Cm', 98:'Cf', 99:'Es', 100:'Fm' }
+#---------------------------------------------------------------------------------------------
+
 
 
 #Import Statements
@@ -18,19 +28,91 @@ import time
 
 
 
-#Main
+#Import the list of fissioning systems to evaluate covariance matrices for
 #---------------------------------------------------------------------------------------------
-def main( arg_in ):
-	system = arg_in[0]
-	Zp = arg_in[1]
-	Ap = arg_in[2]
-	TRIALS = arg_in[3]
+file = open('yields/systems.txt','r')
+lines = file.readlines()
+file.close()
+systems = []
+ZAs = []
+for line in lines:
+	systems.append( line.split(',')[0].strip() )
+	Z = int( line.split(',')[1] )
+	A = int( line.split(',')[2] )
+	ZAs.append( (Z,A) )
+#---------------------------------------------------------------------------------------------
+
+
+
+#Import a list of radioactive decays and branching ratios
+#---------------------------------------------------------------------------------------------
+file = open( 'FIER/FIER/input_data/decays.csv', 'r' )
+lines = file.readlines()
+file.close()
+
+decays = {}
+for line in lines: 
+    Zp = int( line.split(',')[0] )
+    Ap = int( line.split(',')[1] )
+    Ip = int( line.split(',')[2] )
+    BR = float( line.split(',')[5] ) / 100.0
+    BR_unc = float( line.split(',')[6] ) / 100.0
+    Zd = int( line.split(',')[7] )
+    Ad = int( line.split(',')[8] )
+    Id = int( line.split(',')[9] )
+    try:
+        decays[Zp,Ap,Ip][Zd,Ad,Id] = (BR, BR_unc)
+    except KeyError as e:
+        decays[Zp,Ap,Ip] = {}
+        decays[Zp,Ap,Ip][Zd,Ad,Id] = (BR, BR_unc)
+#---------------------------------------------------------------------------------------------
+
+
+
+#Iterate over systems, covert covariance matrix for each
+#---------------------------------------------------------------------------------------------
+for p in range(0,len(systems)):
 	time_start = time.time()
+	system = systems[p]
+	Zp = ZAs[p][0]
+	Ap = ZAs[p][1]
+
+
+	#Run FIER to generate decay stems for the system
+	#-----------------------------------------------------------------------------------------
+	file = open( 'FIER/FIER/deck.txt', 'w' )
+	file.write( 'MODE:SINGLE\n' )
+	file.write( 'ON DECAY PREDICTION\n' )
+	file.write( 'input_data/isotopes.csv     ISOTOPES FILE\n' )
+	file.write( 'input_data/decays.csv       DECAYS   FILE\n' )
+	file.write( 'input_data/gammas.csv       GAMMAS   FILE\n' )
+	file.write( 'YIELDS:ER\n' )
+	if( system[-2:] == 'SF' ):
+		energy = 'SF'
+		A_in = Ap
+	else:
+		energy = energies[system[-1]]
+		A_in = Ap-1
+	file.write( elements[Zp] + ',' + str(A_in) + ',' + energy + '   YIELDS   FILE\n' )
+	file.write( 'NONE  CHAINS OUTPUT\n' )
+	file.write( 'output/decay_stems.csv   STEMS OUTPUT\n' )
+	file.write( 'NONE  POPS OUTPUT\n' )
+	file.write( 'NONE   GAMMAS OUTPUT\n' )
+	file.write( 'NONE  ERROR LOG\n' )
+	file.write( 'INITIALIZE\n' )
+	file.write( 'IRRADIATION\n' )
+	file.write( '1.0,1.0\n' )
+	file.write( 'POPULATIONS\n' )
+	file.write( 'COUNTS\n' )
+	file.write( 'END\n' )
+	file.close()
+	os.system( 'cd FIER/FIER && make > /dev/null' )
+	#-----------------------------------------------------------------------------------------
 
 
 	#Read in the decay stems
 	#-----------------------------------------------------------------------------------------
-	file = open( 'FIER/FIER/output/decay_stems_' + str(system) + '.csv', 'r' )
+	file = open( 'FIER/FIER/output/decay_stems.csv', 'r' )
 	lines = file.readlines()
 	file.close()
 
@@ -63,30 +145,6 @@ def main( arg_in ):
 	        
 	        sublines = []
 	#-----------------------------------------------------------------------------------------
-
-
-	#Import a list of radioactive decays and branching ratios
-	#---------------------------------------------------------------------------------------------
-	file = open( 'FIER/FIER/input_data/decays.csv', 'r' )
-	lines = file.readlines()
-	file.close()
-
-	decays = {}
-	for line in lines: 
-	    Zp = int( line.split(',')[0] )
-	    Ap = int( line.split(',')[1] )
-	    Ip = int( line.split(',')[2] )
-	    BR = float( line.split(',')[5] ) / 100.0
-	    BR_unc = float( line.split(',')[6] ) / 100.0
-	    Zd = int( line.split(',')[7] )
-	    Ad = int( line.split(',')[8] )
-	    Id = int( line.split(',')[9] )
-	    try:
-	        decays[Zp,Ap,Ip][Zd,Ad,Id] = (BR, BR_unc)
-	    except KeyError as e:
-	        decays[Zp,Ap,Ip] = {}
-	        decays[Zp,Ap,Ip][Zd,Ad,Id] = (BR, BR_unc)
-	#---------------------------------------------------------------------------------------------
 
 
 	#Calculate the transmutation probability from one species to another
