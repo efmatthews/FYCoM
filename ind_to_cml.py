@@ -112,7 +112,7 @@ for p in range(0,len(systems)):
 
 	#Read in the decay stems
 	#-----------------------------------------------------------------------------------------
-	file = open( 'FIER/FIER/output/decay_stems.csv', 'r' )
+	file = open( 'FIER/FIER/output/decay_stems_' + system + '.csv', 'r' )
 	lines = file.readlines()
 	file.close()
 
