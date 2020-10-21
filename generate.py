@@ -332,7 +332,6 @@ for p in range(0,len(systems)):
 	    Z_tot = abs( ((Z_tot/100.0) / (Zp*Y_tot)) - 1.0 )
 	    A_tot = abs( ((A_tot/100.0) / ((Ap-nu_bar)*Y_tot)) - 1.0 )
 	    if( ( Z_tot > NUM_PREC ) or ( A_tot > NUM_PREC ) ):
-	        #print( Z_tot, A_tot )
 	        continue
 	    #-------------------------------------------------------------------------------------
 

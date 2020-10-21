@@ -4,9 +4,9 @@ input_data/isotopes.csv     ISOTOPES FILE
 input_data/decays.csv       DECAYS   FILE
 input_data/gammas.csv       GAMMAS   FILE
 YIELDS:ER
-Fm,256,SF   YIELDS   FILE
+U,235,thermal   YIELDS   FILE
 NONE  CHAINS OUTPUT
-output/decay_stems_Fm256SF.csv   STEMS OUTPUT
+output/decay_stems.csv   STEMS OUTPUT
 NONE  POPS OUTPUT
 NONE   GAMMAS OUTPUT
 NONE  ERROR LOG

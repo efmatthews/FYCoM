@@ -7,3 +7,6 @@ __pycache__/
 
 #Images of individual distributions
 figures/distributions/*.eps
+
+#Private communication data from Kessedjian et al.
+Kessedjian_et_al/
