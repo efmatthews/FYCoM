@@ -32,6 +32,7 @@ AMAX = 0
 ZCN = 0 
 ACN = 0
 YIELDS = {}
+evaluations = [ 'ENDF.B.VII.1', 'JEFF.3.1' ]
 #---------------------------------------------------------------------------------------------
 
 
@@ -173,139 +174,140 @@ def chi2A_mod(P_nu_A,ACUR,ACN,YIELDS,return_yields=False):
 
 
 
-#Import the list of fissioning systems to evaluate covariance matrices for
+#Iterate over systems and evaluations, fit P(nu,A) for each
 #---------------------------------------------------------------------------------------------
-file = open('yields/systems.txt','r')
-lines = file.readlines()
-file.close()
-systems = []
-ZAs = []
-for line in lines:
-	systems.append( line.split(',')[0].strip() )
-	Z = int( line.split(',')[1] )
-	A = int( line.split(',')[2] )
-	ZAs.append( (Z,A) )
-#---------------------------------------------------------------------------------------------
-
-
-
-#Iterate over systems, fit P(nu,A) for each
-#---------------------------------------------------------------------------------------------
-for p in range(0,len(systems)):
-	system = systems[p]
-	Zp = ZAs[p][0]
-	Ap = ZAs[p][1]
-
-	#Set random seed for reproducability
+for evaluation in evaluations:
+	#Import the list of fissioning systems to evaluate covariance matrices for
 	#-----------------------------------------------------------------------------------------
-	numpy.random.seed(0)
-	#-----------------------------------------------------------------------------------------
-
-
-	#Read in the yields for the system
-	#-----------------------------------------------------------------------------------------
-	file = open( 'yields/' + system + '.csv', 'r' )
+	file = open('yields/' + evaluation + '/systems.txt','r')
 	lines = file.readlines()
 	file.close()
-	A_min = 300
-	A_max = 0
-	yields = {}
-	yields_unc = {}
+	systems = []
+	ZAs = []
 	for line in lines:
-	    parts = line.split(',')
-	    Z = int( parts[0] )
-	    A = int( parts[1] )
-	    I = int( parts[2] )
-	    Y = float( parts[3] )
-	    Y_unc = float( parts[4] )
-	    if( A < A_min ):
-	        A_min = A
-	    if( A > A_max ):
-	        A_max = A
-	    if( I == 0 ):
-	        try:
-	            yields[Z,A] += Y
-	            yields_unc[Z,A] += Y_unc**2.0
-	        except KeyError as e:
-	            yields[Z,A] = Y
-	            yields_unc[Z,A] = Y_unc**2.0
-	YIELDS = yields
-	for key in yields_unc:
-	    yields_unc[key] = sqrt( yields_unc[key] )
-	YIELDS_UNC = yields_unc
-	ZCN = Zp
-	ACN = Ap
-	AMIN = A_min
-	AMID = int( (A_max - A_min)/2.0 ) + A_min
-	AMAX = A_max
+		systems.append( line.split(',')[0].strip() )
+		Z = int( line.split(',')[1] )
+		A = int( line.split(',')[2] )
+		ZAs.append( (Z,A) )
 	#-----------------------------------------------------------------------------------------
 
 
-	#Perform differential evolution to fit the values for each A value 
-	#-----------------------------------------------------------------------------------------
-	fits = {}
-	chi2s_before = []
-	flags = []
-	fit_last = None
-	guess = [ (0.01,5.0), (0.01,3.0) ]
 
-	for ACUR in range(AMIN,AMAX+1):
-	    #Fit values
-	    fit_P_nu_A, chi2 = chi2A_fit(ACUR,ACN,YIELDS)
-	    flag = 0
-	    chi2A(fit_P_nu_A,ACUR,ACN,YIELDS)
+	for p in range(0,len(systems)):
+		system = systems[p]
+		Zp = ZAs[p][0]
+		Ap = ZAs[p][1]
 
-	    #If fit railed on any of the edges, use last A's fit
-	    if( (fit_P_nu_A[0] == guess[0][0]) or (fit_P_nu_A[0] == guess[0][1]) or (fit_P_nu_A[1] == guess[1][0]) or (fit_P_nu_A[1] == guess[1][1]) or (chi2 == 0.0) ):
-	        if( type(fit_last) != type(None) ):
-	            fit_P_nu_A = fit_last
-	            flag = 1
-	            chi2 = chi2A(fit_P_nu_A,ACUR,ACN,YIELDS)
-	    
-	    chi2s_before.append( chi2 )
-	    flags.append( flag )
-	    fits[ACUR] = fit_P_nu_A
-	    fit_last = fit_P_nu_A
-	#-----------------------------------------------------------------------------------------
+		#Set random seed for reproducability
+		#-------------------------------------------------------------------------------------
+		numpy.random.seed(0)
+		#-------------------------------------------------------------------------------------
 
 
-	#Generate P(v,A) table
-	#-----------------------------------------------------------------------------------------
-	P_nu_A = {}
-	for A in range(AMIN,AMAX+1):
-	    P_nu = []
-	    for j in range(0,10):
-	        mu, sigma = fits[A]
-	        val = round( gauss_trunc_int(j,mu,sigma), 5 )
-	        P_nu.append( val )
-	    
-	    norm = 1.0/sum(P_nu)
-	    for j in range(0,10):
-	        P_nu[j] = P_nu[j] * norm
-	    
-	    P_nu_A[A] = P_nu
-	#-----------------------------------------------------------------------------------------
+		#Read in the yields for the system
+		#-------------------------------------------------------------------------------------
+		file = open( 'yields/' + evaluation + '/independent/' + system + '.csv', 'r' )
+		lines = file.readlines()
+		file.close()
+		A_min = 300
+		A_max = 0
+		yields = {}
+		yields_unc = {}
+		for line in lines:
+		    parts = line.split(',')
+		    Z = int( parts[0] )
+		    A = int( parts[1] )
+		    I = int( parts[2] )
+		    Y = float( parts[3] )
+		    Y_unc = float( parts[4] )
+		    if( A < A_min ):
+		        A_min = A
+		    if( A > A_max ):
+		        A_max = A
+		    if( I == 0 ):
+		        try:
+		            yields[Z,A] += Y
+		            yields_unc[Z,A] += Y_unc**2.0
+		        except KeyError as e:
+		            yields[Z,A] = Y
+		            yields_unc[Z,A] = Y_unc**2.0
+		YIELDS = yields
+		for key in yields_unc:
+		    yields_unc[key] = sqrt( yields_unc[key] )
+		YIELDS_UNC = yields_unc
+		ZCN = Zp
+		ACN = Ap
+		AMIN = A_min
+		AMID = int( (A_max - A_min)/2.0 ) + A_min
+		AMAX = A_max
+		#-------------------------------------------------------------------------------------
 
 
-	#Output P_nu distribution to file
-	#-----------------------------------------------------------------------------------------
-	file = open( 'yields/P_nu_A/' + system + '_nu_data.csv', 'w' )
-	for A in range(AMIN,AMAX+1):
-	    file.write( str(A) )
-	    for j in range(0,10):
-	        file.write( ', ' + str( P_nu_A[A][j] ) )
-	    file.write( '\n' )
-	file.close()
+		#Perform differential evolution to fit the values for each A value 
+		#-------------------------------------------------------------------------------------
+		fits = {}
+		chi2s_before = []
+		flags = []
+		fit_last = None
+		guess = [ (0.01,5.0), (0.01,3.0) ]
 
-	file = open( 'yields/P_nu_A/nu_reports/' + system + '_fit.csv', 'w' )
-	file.write( 'A, mu, sigma, chi2, flag\n' )
-	for A in range(AMIN,AMAX+1):
-	    file.write( str(A) )
-	    for j in range(0,2):
-	        file.write( ', ' + str( fits[A][j] ) )
-	    file.write( ', ' + str(chi2s_before[A-AMIN]) )
-	    file.write( ', ' + str(flags[A-AMIN]) )
-	    file.write('\n')
-	file.close()
-	#-----------------------------------------------------------------------------------------	
+		for ACUR in range(AMIN,AMAX+1):
+		    #Fit values
+		    fit_P_nu_A, chi2 = chi2A_fit(ACUR,ACN,YIELDS)
+		    flag = 0
+		    chi2A(fit_P_nu_A,ACUR,ACN,YIELDS)
+
+		    #If fit railed on any of the edges, use last A's fit
+		    if( (fit_P_nu_A[0] == guess[0][0]) or (fit_P_nu_A[0] == guess[0][1]) or (fit_P_nu_A[1] == guess[1][0]) or (fit_P_nu_A[1] == guess[1][1]) or (chi2 == 0.0) ):
+		        if( type(fit_last) != type(None) ):
+		            fit_P_nu_A = fit_last
+		            flag = 1
+		            chi2 = chi2A(fit_P_nu_A,ACUR,ACN,YIELDS)
+		    
+		    chi2s_before.append( chi2 )
+		    flags.append( flag )
+		    fits[ACUR] = fit_P_nu_A
+		    fit_last = fit_P_nu_A
+		#-------------------------------------------------------------------------------------
+
+
+		#Generate P(v,A) table
+		#-------------------------------------------------------------------------------------
+		P_nu_A = {}
+		for A in range(AMIN,AMAX+1):
+		    P_nu = []
+		    for j in range(0,10):
+		        mu, sigma = fits[A]
+		        val = round( gauss_trunc_int(j,mu,sigma), 5 )
+		        P_nu.append( val )
+		    
+		    norm = 1.0/sum(P_nu)
+		    for j in range(0,10):
+		        P_nu[j] = P_nu[j] * norm
+		    
+		    P_nu_A[A] = P_nu
+		#-------------------------------------------------------------------------------------
+
+
+		#Output P_nu distribution to file
+		#-------------------------------------------------------------------------------------
+		file = open( 'yields/' + evaluation + '/P_nu_A/' + system + '_nu_data.csv', 'w' )
+		for A in range(AMIN,AMAX+1):
+		    file.write( str(A) )
+		    for j in range(0,10):
+		        file.write( ', ' + str( P_nu_A[A][j] ) )
+		    file.write( '\n' )
+		file.close()
+
+		file = open( 'yields/' + evaluation + '/P_nu_A/nu_reports/' + system + '_fit.csv', 'w' )
+		file.write( 'A, mu, sigma, chi2, flag\n' )
+		for A in range(AMIN,AMAX+1):
+		    file.write( str(A) )
+		    for j in range(0,2):
+		        file.write( ', ' + str( fits[A][j] ) )
+		    file.write( ', ' + str(chi2s_before[A-AMIN]) )
+		    file.write( ', ' + str(flags[A-AMIN]) )
+		    file.write('\n')
+		file.close()
+		#-------------------------------------------------------------------------------------
 #---------------------------------------------------------------------------------------------
