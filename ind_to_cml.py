@@ -96,7 +96,7 @@ for evaluation in evaluations:
 			A_in = Ap-1
 		file.write( elements[Zp] + ',' + str(A_in) + ',' + energy + '   YIELDS   FILE\n' )
 		file.write( 'NONE  CHAINS OUTPUT\n' )
-		file.write( 'output/decay_stems.csv   STEMS OUTPUT\n' )
+		file.write( 'output/decay_stems_' + system + '.csv   STEMS OUTPUT\n' )
 		file.write( 'NONE  POPS OUTPUT\n' )
 		file.write( 'NONE   GAMMAS OUTPUT\n' )
 		file.write( 'NONE  ERROR LOG\n' )
