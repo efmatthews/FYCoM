@@ -191,7 +191,7 @@ for evaluation in evaluations:
 
 		#Import the covariance matrix for the independent yields
 		#-------------------------------------------------------------------------------------
-		file = open( 'matrices/' + evaluation + '/' + system + '_corr.csv', 'r' )
+		file = open( 'matrices/' + evaluation + '/' + system + '_cov.csv', 'r' )
 		lines = file.readlines()
 		file.close()
 
