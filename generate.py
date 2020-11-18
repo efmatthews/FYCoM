@@ -358,6 +358,49 @@ for evaluation in evaluations:
 		#-------------------------------------------------------------------------------------
 
 
+
+		#Calculate the primary covariance and correlation matrices
+		#-------------------------------------------------------------------------------------
+		yields_corr = numpy.corrcoef( trials_res )
+		yields_cov = numpy.cov( trials_res )
+		#-------------------------------------------------------------------------------------
+
+
+
+		#Calculate the normalized covariance and correlation matrices
+		#-------------------------------------------------------------------------------------
+		df_std = []
+		df_stdT = []
+		for key in key_list:
+		    df_std.append( yields_unc[key] )
+		    df_stdT.append( [yields_unc[key]] )
+		df_std = numpy.array( df_std )
+		df_stdT = numpy.array( df_stdT )
+		yields_cov_prenorm = df_std * yields_corr * df_stdT
+
+		total_sum = yields_cov_prenorm.sum()
+		if( total_sum > 0.0 ):
+		    non_diag = yields_cov_prenorm[:,:]
+		    numpy.fill_diagonal( non_diag, 0.0 )
+		    negative_sum = abs( non_diag[non_diag < 0.0].sum() )
+		    norm = (total_sum + negative_sum) / negative_sum
+		    yields_corr_norm = yields_corr[:,:]
+		    yields_corr_norm[non_diag < 0.0] *= norm
+		    yields_corr_norm[yields_corr_norm < -1.0] = -1.0
+		    yields_cov_norm = df_std * yields_corr_norm * df_stdT
+		elif( total_sum < 0.0 ):
+		    non_diag = yields_cov_prenorm[:,:]
+		    numpy.fill_diagonal( non_diag, 0.0 )
+		    positive_sum = non_diag[non_diag > 0.0].sum()
+		    norm = (total_sum + positive_sum) / positive_sum
+		    yields_corr_norm = yields_corr[:,:]
+		    yields_corr_norm[non_diag > 0.0] *= norm
+		    yields_corr_norm[yields_corr_norm > 1.0] = 1.0
+		    yields_cov_norm = df_std * yields_corr_norm * df_stdT
+		#-------------------------------------------------------------------------------------
+
+
+
 		#Verify conserved quantities 
 		#-------------------------------------------------------------------------------------
 		file = open( 'matrices/' + evaluation + '/verification_records/verification_' + system + '.csv', 'w' )
@@ -367,30 +410,22 @@ for evaluation in evaluations:
 		    Z_tot = sum( trials_res[:,n] * key_list_Z ) / (Zp*Y_tot*100.0)
 		    A_tot = sum( trials_res[:,n] * key_list_A ) / ((Ap-nu_bar)*Y_tot*100.0)
 		    file.write( str(Y_tot) + ', ' + str(Z_tot) + ', ' + str(A_tot) + '\n' )
+		file.write( 'Matrix normalization:\n' )
+		if( total_sum > 0.0 ):
+			file.write( 'sign = -\n')
+		else:
+			file.write( 'sign = +\n' )
+		file.write( 'norm = ' + str(norm) + '\n' )
+		file.write( 'cov. sum = ' + str(yields_cov_norm.sum()) + '\n' )
 		file.close()
-		#-------------------------------------------------------------------------------------
-
-
-
-		#Calculate the covariance and correlation matrix
-		#-------------------------------------------------------------------------------------
-		yields_corr = numpy.corrcoef( trials_res )
-		df_std = []
-		df_stdT = []
-		for key in key_list:
-		    df_std.append( yields_unc[key] )
-		    df_stdT.append( [yields_unc[key]] )
-		df_std = numpy.array( df_std )
-		df_stdT = numpy.array( df_stdT )
-		yields_cov = df_std * yields_corr * df_stdT
 		#-------------------------------------------------------------------------------------
 
 
 
 		#Save the matrices to file
 		#-------------------------------------------------------------------------------------
-		#Covariance save
-		file = open( 'matrices/' + evaluation + '/' + system + '_cov.csv', 'w' )
+		#Primary covariance save
+		file = open( 'matrices/' + evaluation + '/independent/' + system + '_cov.csv', 'w' )
 		for key in key_list:
 			file.write( ', ' + str(key[0]*10000 + key[2]*1000 + key[1]) )
 		file.write('\n')
@@ -403,8 +438,8 @@ for evaluation in evaluations:
 			file.write( '\n' )
 		file.close()
 
-		#Correlation save
-		file = open( 'matrices/' + evaluation + '/' + system + '_corr.csv', 'w' )
+		#Primary correlation save
+		file = open( 'matrices/' + evaluation + '/independent/' + system + '_corr.csv', 'w' )
 		for key in key_list:
 			file.write( ', ' + str(key[0]*10000 + key[2]*1000 + key[1]) )
 		file.write('\n')
@@ -416,23 +451,51 @@ for evaluation in evaluations:
 				file.write( ', ' + str(yields_corr[i,j]) )
 			file.write( '\n' )
 		file.close()
+
+		#Normalized covariance save
+		file = open( 'matrices/' + evaluation + '/independent/' + system + '_normed_cov.csv', 'w' )
+		for key in key_list:
+			file.write( ', ' + str(key[0]*10000 + key[2]*1000 + key[1]) )
+		file.write('\n')
+		for i in range(0,len(key_list)):
+			key = key_list[i]
+			file.write( str(key[0]*10000 + key[2]*1000 + key[1]) + ' ' )
+			for j in range(0,len(key_list)):
+				key2 = key_list[j]
+				file.write( ', ' + str(yields_cov_norm[i,j]) )
+			file.write( '\n' )
+		file.close()
+
+		#Normalized correlation save
+		file = open( 'matrices/' + evaluation + '/independent/' + system + '_normed_corr.csv', 'w' )
+		for key in key_list:
+			file.write( ', ' + str(key[0]*10000 + key[2]*1000 + key[1]) )
+		file.write('\n')
+		for i in range(0,len(key_list)):
+			key = key_list[i]
+			file.write( str(key[0]*10000 + key[2]*1000 + key[1]) + ' ' )
+			for j in range(0,len(key_list)):
+				key2 = key_list[j]
+				file.write( ', ' + str(yields_corr_norm[i,j]) )
+			file.write( '\n' )
+		file.close()
 		#-------------------------------------------------------------------------------------
 
 
 
 		#Plot the correlation matrix
 		#-------------------------------------------------------------------------------------
-		# rcParams['figure.figsize'] = 14, 14
-		# rcParams['font.size'] = 22
-		# plt.matshow(yields_corr,cmap="RdBu",vmin=-1.0,vmax=1.0)
-		# cbar = plt.colorbar()
-		# cbar.set_label('Correlation Coeff.')
-		# plt.tight_layout()
-		# plt.xlabel('FY Index')
-		# plt.ylabel('FY Index')
-		# #plt.savefig( 'figures/' + system + '_corr.eps', format='eps', dpi=300 )
-		# plt.savefig( 'figures/' + system + '_corr.png', dpi=500 )
-		# plt.clf()
+		rcParams['figure.figsize'] = 14, 14
+		rcParams['font.size'] = 22
+		plt.matshow(yields_corr,cmap="RdBu",vmin=-1.0,vmax=1.0)
+		cbar = plt.colorbar()
+		cbar.set_label('Correlation Coeff.')
+		plt.tight_layout()
+		plt.xlabel('FY Index')
+		plt.ylabel('FY Index')
+		#plt.savefig( 'figures/' + system + '_corr.eps', format='eps', dpi=300 )
+		plt.savefig( 'figures/' + evaluation + '/' + system + '_corr.png', dpi=500 )
+		plt.clf()
 		#-------------------------------------------------------------------------------------
 
 
