@@ -191,7 +191,7 @@ for evaluation in evaluations:
 
 		#Import the covariance matrix for the independent yields
 		#-------------------------------------------------------------------------------------
-		file = open( 'matrices/' + evaluation + '/' + system + '_cov.csv', 'r' )
+		file = open( 'matrices/' + evaluation + '/independent/' + system + '_cov.csv', 'r' )
 		lines = file.readlines()
 		file.close()
 
@@ -306,7 +306,7 @@ for evaluation in evaluations:
 		#Save the correlation and covariance matrices to file
 		#-------------------------------------------------------------------------------------
 		#Covariance save
-		file = open( 'matrices/' + evaluation + '/' + system + '_cml_cov.csv', 'w' )
+		file = open( 'matrices/' + evaluation + '/cumulative/' + system + '_cml_cov.csv', 'w' )
 		for key in inds:
 			file.write( ', ' + str(key[0]*10000 + key[2]*1000 + key[1]) )
 		file.write('\n')
@@ -319,22 +319,8 @@ for evaluation in evaluations:
 			file.write( '\n' )
 		file.close()
 
-		#Normed covariance save
-		file = open( 'matrices/' + evaluation + '/' + system + '_cml_normed_cov.csv', 'w' )
-		for key in inds:
-			file.write( ', ' + str(key[0]*10000 + key[2]*1000 + key[1]) )
-		file.write('\n')
-		for i in range(0,len(inds)):
-			key = inds[i]
-			file.write( str(key[0]*10000 + key[2]*1000 + key[1]) + ' ' )
-			for j in range(0,len(inds)):
-				key2 = inds[j]
-				file.write( ', ' + str(yields_cov_normed[i,j]) )
-			file.write( '\n' )
-		file.close()
-
 		#Correlation save
-		file = open( 'matrices/' + evaluation + '/' + system + '_cml_corr.csv', 'w' )
+		file = open( 'matrices/' + evaluation + '/cumulative/' + system + '_cml_corr.csv', 'w' )
 		for key in inds:
 			file.write( ', ' + str(key[0]*10000 + key[2]*1000 + key[1]) )
 		file.write('\n')
@@ -344,6 +330,20 @@ for evaluation in evaluations:
 			for j in range(0,len(inds)):
 				key2 = inds[j]
 				file.write( ', ' + str(yields_corr[i,j]) )
+			file.write( '\n' )
+		file.close()
+
+		#Normed covariance save
+		file = open( 'matrices/' + evaluation + '/cumulative/' + system + '_cml_normed_cov.csv', 'w' )
+		for key in inds:
+			file.write( ', ' + str(key[0]*10000 + key[2]*1000 + key[1]) )
+		file.write('\n')
+		for i in range(0,len(inds)):
+			key = inds[i]
+			file.write( str(key[0]*10000 + key[2]*1000 + key[1]) + ' ' )
+			for j in range(0,len(inds)):
+				key2 = inds[j]
+				file.write( ', ' + str(yields_cov_normed[i,j]) )
 			file.write( '\n' )
 		file.close()
 		#-------------------------------------------------------------------------------------
