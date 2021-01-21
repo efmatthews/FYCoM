@@ -10,3 +10,9 @@ figures/distributions/*.eps
 
 #Private communication data from Kessedjian et al.
 Kessedjian_et_al/
+
+# Mac cruft
+.DS_Store
+
+# Check points
+.ipynb_checkpoints
