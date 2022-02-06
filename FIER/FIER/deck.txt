@@ -3,10 +3,10 @@ ON DECAY PREDICTION
 input_data/isotopes.csv     ISOTOPES FILE
 input_data/decays.csv       DECAYS   FILE
 input_data/gammas.csv       GAMMAS   FILE
-YIELDS:ER
-Am,241,fission   YIELDS   FILE
+YIELDS:FILE
+../../yields/JEFF/independent/U238H.csv
 NONE  CHAINS OUTPUT
-output/decay_stems_Am241F.csv   STEMS OUTPUT
+output/decay_stems_U238H.csv   STEMS OUTPUT
 NONE  POPS OUTPUT
 NONE   GAMMAS OUTPUT
 NONE  ERROR LOG
