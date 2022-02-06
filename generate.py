@@ -5,9 +5,9 @@
 #Constants
 #---------------------------------------------------------------------------------------------
 TRIALS = 10000
-evaluations = [ 'ENDF.B.VII.1', 'JEFF.3.1' ]
-NUM_PRECS = { 'ENDF.B.VII.1':0.0001, 'JEFF.3.1':0.0005 }
-NUM_PRECS_EXCEPTIONS = { 'ENDF.B.VII.1:Am241H':0.0005, 'JEFF.3.1:U233H':0.0007 }
+evaluations = [ 'ENDF', 'JEFF' ]
+NUM_PRECS = { 'ENDF':0.0001, 'JEFF':0.0005 }
+NUM_PRECS_EXCEPTIONS = { 'ENDF:Am241H':0.0005, 'JEFF:U233H':0.0007 }
 #---------------------------------------------------------------------------------------------
 
 #Import Statements

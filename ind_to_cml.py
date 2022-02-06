@@ -10,7 +10,7 @@
 TRIALS = 10000
 energies = { 'T':'thermal', 'F':'fission', 'H':'DT', 'D':'DD', 'SF':'SF' }
 elements = { 90:'Th', 91:'Pa', 92:'U', 93:'Np', 94:'Pu', 95:'Am', 96:'Cm', 98:'Cf', 99:'Es', 100:'Fm' }
-evaluations = [ 'ENDF.B.VII.1', 'JEFF.3.1' ]
+evaluations = [ 'ENDF', 'JEFF' ]
 #---------------------------------------------------------------------------------------------
 
 
@@ -87,14 +87,16 @@ for evaluation in evaluations:
 		file.write( 'input_data/isotopes.csv     ISOTOPES FILE\n' )
 		file.write( 'input_data/decays.csv       DECAYS   FILE\n' )
 		file.write( 'input_data/gammas.csv       GAMMAS   FILE\n' )
-		file.write( 'YIELDS:ER\n' )
-		if( system[-2:] == 'SF' ):
-			energy = 'SF'
-			A_in = Ap
-		else:
-			energy = energies[system[-1]]
-			A_in = Ap-1
-		file.write( elements[Zp] + ',' + str(A_in) + ',' + energy + '   YIELDS   FILE\n' )
+		file.write( 'YIELDS:FILE\n' )
+		file.write( '../../yields/' + evaluation + '/independent/' + system + '.csv\n' )
+		# file.write( 'YIELDS:ER\n' )
+		# if( system[-2:] == 'SF' ):
+		# 	energy = 'SF'
+		# 	A_in = Ap
+		# else:
+		# 	energy = energies[system[-1]]
+		# 	A_in = Ap-1
+		# file.write( elements[Zp] + ',' + str(A_in) + ',' + energy + '   YIELDS   FILE\n' )
 		file.write( 'NONE  CHAINS OUTPUT\n' )
 		file.write( 'output/decay_stems_' + system + '.csv   STEMS OUTPUT\n' )
 		file.write( 'NONE  POPS OUTPUT\n' )
